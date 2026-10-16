@@ -509,11 +509,11 @@ function drawBook(book, buy, dollars, title) {
   const bestBid = bids.length ? units(bids[0].price) : null;
   let loU, hiU;
   if (buy) {
-    loU = (bestBid ?? bestAsk) - 60;
     hiU = Math.max(bestAsk ?? 0, ...eatenUnits) + 60;
+    loU = (bestBid ?? bestAsk) - Math.max(150, hiU - (bestAsk ?? 0));
   } else {
-    hiU = (bestAsk ?? bestBid) + 60;
     loU = Math.min(bestBid ?? 1000, ...eatenUnits) - 60;
+    hiU = (bestAsk ?? bestBid) + Math.max(150, (bestBid ?? 1000) - loU);
   }
   loU = Math.max(tick, loU);
   hiU = Math.min(1000 - tick, hiU);

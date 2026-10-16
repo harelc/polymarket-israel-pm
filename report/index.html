@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>כמה עולה להזיז את המחיר בפולימרקט</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #e6edef;
+    --sheet: #f8fbfa;
+    --ink: #172226;
+    --muted: #4a5d62;
+    --line: #c8d4d7;
+    --faint: #dde6e8;
+    --up: #8c3b2e;
+    --down: #1c5e50;
+    --c1: #1c5e50;
+    --c2: #172226;
+    --c3: #3d5f86;
+    --c4: #a0522d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Heebo, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+  a { color: inherit; text-decoration-color: var(--up); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--down); outline-offset: 2px; }
+  .wrap { width: min(900px, calc(100% - 40px)); margin: 0 auto; padding: 48px 0 72px; }
+  h1, h2 { font-family: "Frank Ruhl Libre", serif; font-weight: 700; margin: 0; }
+  h1 { font-size: clamp(2rem, 4.4vw, 2.75rem); line-height: 1.12; letter-spacing: -0.01em; max-width: 16ch; }
+  h2 { font-size: 1.5rem; line-height: 1.2; margin-bottom: 10px; }
+  p { margin: 0 0 12px; max-width: 64ch; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.92rem; }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  header .source { margin: 14px 0 0; font-size: 0.95rem; color: var(--muted); }
+  section { margin-top: 48px; }
+
+  .calc {
+    margin-top: 32px;
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    padding: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 28px;
+  }
+  .field { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 14px; }
+  .field span { display: block; margin-bottom: 4px; }
+  .money-in { position: relative; }
+  .money-in b { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-weight: 500; color: var(--muted); }
+  input, select {
+    width: 100%;
+    font: inherit;
+    font-size: 1.15rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 9px 12px;
+  }
+  input { direction: ltr; text-align: left; padding-left: 28px; font-variant-numeric: tabular-nums; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; direction: ltr; justify-content: flex-end; }
+  .presets button {
+    font: inherit;
+    font-size: 0.88rem;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .presets button:hover { color: var(--ink); border-color: var(--ink); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); }
+  .seg button {
+    font: inherit;
+    font-size: 0.98rem;
+    padding: 9px 8px;
+    border: 0;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .seg button + button { border-inline-start: 1px solid var(--line); }
+  .seg button:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+
+  .result { border-inline-start: 1px solid var(--line); padding-inline-start: 28px; display: flex; flex-direction: column; justify-content: center; }
+  .delta {
+    font-family: "Frank Ruhl Libre", serif;
+    font-weight: 700;
+    font-size: clamp(2.6rem, 6vw, 3.6rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .delta.up { color: var(--up); }
+  .delta.down { color: var(--down); }
+  .delta-unit { font-size: 1.05rem; color: var(--muted); margin: 6px 0 14px; }
+  .fromto { font-size: 1.12rem; margin: 0 0 6px; }
+  .fromto .ltr { font-weight: 600; }
+  .px { display: inline-block; padding: 1px 8px; font-weight: 600; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+  .px.old { background: var(--faint); color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .px.new.up { background: #f1dcd6; color: var(--up); }
+  .px.new.down { background: #d4e8e1; color: var(--down); }
+  .px.same { background: var(--faint); color: var(--ink); }
+  .why { font-size: 0.92rem; color: var(--muted); margin: 0; }
+  .payout { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 0.98rem; }
+  .payout:empty { display: none; }
+  .payout dt { color: var(--muted); }
+  .payout dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .fact {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 28px;
+    align-items: baseline;
+    margin-top: 6px;
+  }
+  .fact .big {
+    font-family: "Frank Ruhl Libre", serif;
+    font-weight: 700;
+    font-size: 2rem;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    direction: ltr;
+    text-align: right;
+  }
+  .fact p { margin: 0; }
+
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; }
+  figure { margin: 0; background: var(--sheet); border: 1px solid var(--line); padding: 14px 14px 10px; }
+  figure h3 { font-size: 1rem; font-weight: 600; margin: 0 0 2px; }
+  figure .sub { font-size: 0.85rem; color: var(--muted); margin: 0 0 6px; }
+  svg.plot { width: 100%; height: auto; display: block; direction: ltr; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 0; font-size: 0.98rem; }
+  .legend button {
+    font: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--ink);
+    cursor: pointer;
+    opacity: 0.55;
+  }
+  .legend button[aria-pressed="true"] { opacity: 1; font-weight: 600; }
+  .legend i { display: inline-block; width: 16px; height: 3px; margin-inline-end: 6px; vertical-align: middle; }
+
+  .case { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; }
+  .case figure { padding-bottom: 12px; }
+  .tape { width: 100%; border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  .tape td, .tape th { padding: 6px 0; border-bottom: 1px solid var(--faint); text-align: start; }
+  .tape th { font-weight: 500; color: var(--muted); font-size: 0.85rem; }
+  .tape .n { direction: ltr; text-align: end; }
+
+  table.sizes { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  .sizes th, .sizes td { padding: 9px 0; border-bottom: 1px solid var(--line); text-align: start; }
+  .sizes th { font-weight: 500; color: var(--muted); font-size: 0.9rem; }
+  .sizes .n { text-align: end; direction: ltr; }
+  .bar { display: inline-block; height: 8px; background: var(--ink); vertical-align: middle; margin-inline-end: 8px; }
+  .bar.cash { background: var(--down); }
+
+  footer { margin-top: 48px; font-size: 0.9rem; color: var(--muted); }
+  footer p { max-width: 70ch; }
+
+  @media (max-width: 760px) {
+    .calc, .charts, .case { grid-template-columns: 1fr; }
+    .result { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--line); padding-top: 20px; }
+    .wrap { width: calc(100% - 28px); padding-top: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>כמה כסף צריך כדי להזיז את המחיר בפולימרקט</h1>
+    <p class="source">השוק <a href="https://polymarket.com/event/who-will-be-the-next-prime-minister-of-israel-after-the-next-election">«מי יהיה ראש הממשלה אחרי הבחירות הבאות»</a> בפולימרקט. המחשבון והגרפים מחושבים לפי הפקודות שממתינות בשוק כרגע.</p>
+  </header>
+
+  <div class="calc" aria-live="polite">
+    <div>
+      <label class="field"><span>סכום</span>
+        <div class="money-in"><b>$</b><input id="amt" type="number" min="1" step="100" value="10000" inputmode="decimal"></div>
+        <div class="presets" id="presets">
+          <button type="button" data-v="100">100</button>
+          <button type="button" data-v="1000">1,000</button>
+          <button type="button" data-v="10000">10,000</button>
+          <button type="button" data-v="100000">100,000</button>
+        </div>
+      </label>
+      <label class="field"><span>מועמד</span><select id="who"></select></label>
+      <div class="field"><span>פעולה</span>
+        <div class="seg" role="group" aria-label="פעולה">
+          <button type="button" data-act="buy-yes" aria-pressed="true">קנייה של «כן»</button>
+          <button type="button" data-act="sell-yes" aria-pressed="false">מכירה של «כן»</button>
+          <button type="button" data-act="buy-no" aria-pressed="false">קנייה של «לא»</button>
+          <button type="button" data-act="sell-no" aria-pressed="false">מכירה של «לא»</button>
+        </div>
+      </div>
+    </div>
+    <div class="result">
+      <div id="delta" class="delta">…</div>
+      <div id="unit" class="delta-unit">נקודות אחוז</div>
+      <p id="fromto" class="fromto">טוען את הפקודות.</p>
+      <p id="why" class="why"></p>
+      <dl id="payout" class="payout"></dl>
+    </div>
+  </div>
+
+  <section>
+    <h2>איך המחיר זז</h2>
+    <p>בשוק יש תור של פקודות שממתינות: אנשים שמוכנים למכור במחיר מסוים, ואנשים שמוכנים לקנות במחיר מסוים. מי שקונה מקבל את ההצעה הזולה ביותר. רק כשכל הכמות במחיר הזה נגמרת, הוא עובר למחיר הבא. כך עסקה אחת גדולה יכולה לדלג כמה מדרגות בבת אחת. עסקה קטנה רק נוגסת בערימה, והמחיר לא זז.</p>
+    <p>ברשימת העסקאות באתר מופיע רק מי שיזם את העסקה. הצד השני הוא מי שהפקודה שלו חיכתה בתור, והוא לא מופיע. לכן «קנה» ו«מכר» הן שורות נפרדות, ולא שני צדדים של אותה עסקה.</p>
+  </section>
+
+  <section>
+    <h2>סכום מול תזוזה</h2>
+    <p class="muted small">ציר הסכום לוגריתמי: כל קו אנכי גדול פי עשרה מהקודם. הקו המקווקו הוא הסכום שבמחשבון. קו שנקטע לפני הסוף פירושו שלא נשארו עוד פקודות בצד הזה.</p>
+    <div class="legend" id="legend"></div>
+    <div class="charts">
+      <figure>
+        <h3>קנייה של «כן»</h3>
+        <p class="sub">בכמה נקודות עולה המחיר של «כן»</p>
+        <svg id="chart-buy" class="plot" viewBox="0 0 420 260" role="img" aria-label="סכום קנייה מול עליית המחיר"></svg>
+      </figure>
+      <figure>
+        <h3>מכירה של «כן»</h3>
+        <p class="sub">בכמה נקודות יורד המחיר של «כן»</p>
+        <svg id="chart-sell" class="plot" viewBox="0 0 420 260" role="img" aria-label="סכום מכירה מול ירידת המחיר"></svg>
+      </figure>
+      <figure>
+        <h3>קנייה של «לא»</h3>
+        <p class="sub">בכמה נקודות עולה «לא» ויורד «כן»</p>
+        <svg id="chart-buy-no" class="plot" viewBox="0 0 420 260" role="img" aria-label="סכום קניית לא מול עליית מחיר הלא"></svg>
+      </figure>
+      <figure>
+        <h3>מכירה של «לא»</h3>
+        <p class="sub">בכמה נקודות יורד «לא» ועולה «כן»</p>
+        <svg id="chart-sell-no" class="plot" viewBox="0 0 420 260" role="img" aria-label="סכום מכירת לא מול ירידת מחיר הלא"></svg>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>זה קרה באמת, לדוגמה: 14 באוקטובר, 21:30</h2>
+    <p>ארנק אחד מכר «כן» של נתניהו בשנייה אחת, בשלוש מנות. שלוש המנות נבלעו בפקודות קנייה שחיכו בכמה מחירים שונים. המחיר שמוצג באתר צנח בשש נקודות. שעה אחר כך הוא עדיין לא חזר למקום.</p>
+    <div class="case">
+      <figure>
+        <h3>המכירה</h3>
+        <table class="tape">
+          <thead><tr><th>מחיר ממוצע</th><th class="n">מניות</th><th class="n">דולרים</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ltr">29.2¢</span></td><td class="n">100,771</td><td class="n">$29,428</td></tr>
+            <tr><td><span class="ltr">28.0¢</span></td><td class="n">25,737</td><td class="n">$7,206</td></tr>
+            <tr><td><span class="ltr">26.4¢</span></td><td class="n">53,177</td><td class="n">$14,043</td></tr>
+            <tr><td><b>סך הכול</b></td><td class="n"><b>179,685</b></td><td class="n"><b>$50,677</b></td></tr>
+          </tbody>
+        </table>
+      </figure>
+      <figure>
+        <h3>המחיר המוצג של נתניהו</h3>
+        <svg id="chart-case" class="plot" viewBox="0 0 420 200" role="img" aria-label="המחיר המוצג מ־21:00 עד 22:30"></svg>
+        <p class="sub">דקה אחר דקה, 21:00 עד 22:30 שעון UTC. לפני המכירה 30.5%, דקה אחריה 24.5%, ושעה אחריה 27%.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>כמה נדירות עסקאות גדולות</h2>
+    <div class="fact">
+      <div class="big">$2.66</div>
+      <p>גודל העסקה החציונית ב־10,000 העסקאות האחרונות, מ־7 עד 16 באוקטובר.</p>
+      <div class="big">91%</div>
+      <p>מהעסקאות הן מתחת ל־<span class="ltr">$100</span>. כולן יחד הן רק 10% מהכסף.</p>
+      <div class="big">1.4</div>
+      <p>עסקאות של <span class="ltr">$5,000</span> ומעלה ביום, בממוצע מאז דצמבר, בכל המועמדים יחד. בינואר לא הייתה אף אחת. ביוני היו 139.</p>
+    </div>
+    <table class="sizes">
+      <thead><tr><th>גודל עסקה</th><th>חלק מהעסקאות</th><th>חלק מהכסף</th></tr></thead>
+      <tbody>
+        <tr><td>עד <span class="ltr">$10</span></td><td><span class="bar" style="width:111px"></span>74%</td><td><span class="bar cash" style="width:3px"></span>2%</td></tr>
+        <tr><td><span class="ltr">$10–100</span></td><td><span class="bar" style="width:26px"></span>17%</td><td><span class="bar cash" style="width:11px"></span>8%</td></tr>
+        <tr><td><span class="ltr">$100–1,000</span></td><td><span class="bar" style="width:11px"></span>7%</td><td><span class="bar cash" style="width:40px"></span>27%</td></tr>
+        <tr><td><span class="ltr">$1,000–5,000</span></td><td><span class="bar" style="width:2px"></span>1%</td><td><span class="bar cash" style="width:43px"></span>29%</td></tr>
+        <tr><td><span class="ltr">$5,000+</span></td><td><span class="bar" style="width:1px"></span>0.3%</td><td><span class="bar cash" style="width:52px"></span>35%</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p>המחשבון מראה את התזוזה המיידית מול הפקודות שממתינות עכשיו. אחרי עסקה גדולה נכנסות פקודות חדשות, והמחיר חוזר בחלקו. בפולימרקט «כן» ו«לא» הם שני צדדים של אותו ספר: קנייה של מניית «לא» שקולה למכירה של מניית «כן», אבל לא באותו סכום: כשמחיר «כן» הוא 12¢, מניית «לא» עולה 88¢. לכן אותו סכום בדולרים מזיז את המחיר הרבה פחות בצד של «לא». המחיר המוצג באתר הוא האמצע בין מחיר הקנייה למחיר המכירה. מקור הנתונים: ה־API הציבורי של פולימרקט.</p>
+  </footer>
+</div>
+<script>
+let PEOPLE = [];
+let savedBooks = null;
+const liveCache = {};
+let act = "buy-yes";
+const CHART_NAMES = ["Gadi Eizenkot", "Benjamin Netanyahu", "Naftali Bennett", "Avigdor Lieberman"];
+const COLORS = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"];
+const RAW_COLORS = ["#1c5e50", "#172226", "#3d5f86", "#a0522d"];
+const SAMPLE = Array.from({ length: 81 }, (_, i) => 10 * Math.pow(10, i / 20));
+const CASE = [[0,30.5],[30,30.5],[31,24.5],[32,25],[33,26],[38,25.5],[42,26.5],[67,27],[78,27.5],[80,27],[85,27],[90,27.5]];
+const series = {};
+const NS = "http://www.w3.org/2000/svg";
+
+const $ = (id) => document.getElementById(id);
+const fmtMoney = (n) => "$" + Math.round(n).toLocaleString("en-US");
+function fmtCents(p) {
+  const c = Math.round(p * 1000) / 10;
+  return (Number.isInteger(c) ? String(c) : c.toFixed(1)) + "¢";
+}
+const ltr = (text) => "<span class=\"ltr\">" + text + "</span>";
+const he = (person) => person.he || person.name;
+
+function levelsOf(book, side) {
+  const grouped = new Map();
+  for (const row of book[side] || []) {
+    const price = Number(row.price);
+    grouped.set(price, (grouped.get(price) || 0) + price * Number(row.size));
+  }
+  const levels = [...grouped].map(([price, cash]) => ({ price, cash }));
+  levels.sort((a, b) => side === "asks" ? a.price - b.price : b.price - a.price);
+  return levels;
+}
+function walk(levels, dollars) {
+  if (!levels.length) return null;
+  let spent = 0;
+  let shares = 0;
+  let i = 0;
+  let left = levels[0].cash;
+  while (i < levels.length) {
+    const take = Math.min(left, dollars - spent);
+    spent += take;
+    shares += take / levels[i].price;
+    left -= take;
+    if (left > 0.5) break;
+    i += 1;
+    if (i < levels.length) left = levels[i].cash;
+    if (spent >= dollars - 0.5) break;
+  }
+  const exhausted = i >= levels.length;
+  return {
+    start: levels[0].price,
+    end: exhausted ? levels[levels.length - 1].price : levels[i].price,
+    spent,
+    shares,
+    exhausted,
+    topCash: levels[0].cash
+  };
+}
+async function loadSaved() {
+  if (savedBooks !== null) return savedBooks;
+  try {
+    const response = await fetch("/api/books");
+    savedBooks = response.ok ? await response.json() : false;
+  } catch (err) {
+    savedBooks = false;
+  }
+  return savedBooks;
+}
+async function load(person) {
+  const saved = await loadSaved();
+  if (saved && saved.books && saved.books[person.name]) return { ...saved.books[person.name], at: saved.fetchedAt };
+  if (!liveCache[person.name]) {
+    const get = (token) => fetch("https://clob.polymarket.com/book?token_id=" + token).then((r) => r.json());
+    const [yes, no] = await Promise.all([get(person.yes), get(person.no)]);
+    liveCache[person.name] = { yes, no, at: null };
+  }
+  return liveCache[person.name];
+}
+function stamp(books) {
+  if (!books.at) return "הפקודות נקראו מפולימרקט עכשיו.";
+  const t = new Date(books.at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  return "הפקודות נקראו ב־" + t + ".";
+}
+
+async function run() {
+  const person = PEOPLE.find((p) => p.name === $("who").value);
+  const dollars = Number($("amt").value);
+  drawCharts();
+  if (!person || !(dollars > 0)) {
+    $("delta").textContent = "–";
+    $("delta").className = "delta";
+    $("payout").replaceChildren();
+    $("fromto").textContent = "צריך להזין סכום.";
+    $("why").textContent = "";
+    return;
+  }
+  let books;
+  try {
+    books = await load(person);
+  } catch (err) {
+    $("fromto").textContent = "לא הצלחנו לטעון את הפקודות.";
+    return;
+  }
+  const buy = act.startsWith("buy");
+  const yesSide = act.endsWith("yes");
+  const r = walk(levelsOf(yesSide ? books.yes : books.no, buy ? "asks" : "bids"), dollars);
+  if (!r) {
+    $("delta").textContent = "–";
+    $("payout").replaceChildren();
+    $("fromto").textContent = "אין פקודות ממתינות בצד הזה.";
+    $("why").textContent = "";
+    return;
+  }
+  const from = r.start;
+  const to = r.end;
+  const move = Math.round((to - from) * 1000) / 10;
+  const dir = move > 0 ? "up" : move < 0 ? "down" : "";
+  $("delta").className = "delta " + dir;
+  $("delta").textContent = (move > 0 ? "+" : "") + (Number.isInteger(move) ? move : move.toFixed(1));
+  $("delta").setAttribute("dir", "ltr");
+  const token = yesSide ? "«כן»" : "«לא»";
+  const what = (buy ? "מחיר הקנייה של " : "מחיר המכירה של ") + token;
+  const shares = Math.round(r.shares);
+  const avg = r.spent / r.shares;
+  const winsIf = yesSide ? "אם " + he(person) + " ייבחר" : "אם " + he(person) + " לא ייבחר";
+  const row = (k, v) => "<dt>" + k + "</dt><dd>" + v + "</dd>";
+  if (buy) {
+    const profit = r.shares - r.spent;
+    $("payout").innerHTML =
+      row("מניות " + token + " שנקנות", ltr(shares.toLocaleString("en-US"))) +
+      row("מחיר ממוצע למניה", ltr(fmtCents(avg))) +
+      row(winsIf, "מקבלים " + ltr(fmtMoney(r.shares)) + ", רווח של " + ltr(fmtMoney(profit)) + " (פי " + ltr((r.shares / r.spent).toFixed(1)) + ")") +
+      row("אחרת", "ההשקעה, " + ltr(fmtMoney(r.spent)) + ", אובדת");
+  } else {
+    $("payout").innerHTML =
+      row("מניות " + token + " שנמכרות", ltr(shares.toLocaleString("en-US"))) +
+      row("מחיר ממוצע למניה", ltr(fmtCents(avg))) +
+      row("מתקבל עכשיו", ltr(fmtMoney(r.spent))) +
+      row(winsIf, "המניות האלה היו שוות " + ltr(fmtMoney(r.shares)));
+  }
+  if (move === 0) {
+    $("fromto").innerHTML = what + " נשאר " + "<span class=\"px same\">" + fmtCents(from) + "</span>.";
+    $("why").innerHTML = "הסכום נבלע בערימה של " + ltr(fmtMoney(r.topCash)) + " שממתינה במחיר הזה. " + stamp(books);
+  } else {
+    $("fromto").innerHTML = what + " זז מ־" + "<span class=\"px old\">" + fmtCents(from) + "</span> ל־" + "<span class=\"px new " + dir + "\">" + fmtCents(to) + "</span>.";
+    $("why").innerHTML = (r.exhausted
+      ? "כל הפקודות בצד הזה נגמרו אחרי " + ltr(fmtMoney(r.spent)) + ". היתרה, " + ltr(fmtMoney(dollars - r.spent)) + ", לא מתבצעת. "
+      : "") + stamp(books);
+  }
+}
+
+function el(name, attrs, text) {
+  const node = document.createElementNS(NS, name);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function frame(svg, w, h, pad, xTicks, yMax, yStep, xOf, yOf, xFmt) {
+  svg.replaceChildren();
+  for (let v = 0; v <= yMax + 1e-9; v += yStep) {
+    svg.append(el("line", { x1: pad.l, x2: w - pad.r, y1: yOf(v), y2: yOf(v), stroke: "#dde6e8" }));
+    svg.append(el("text", { x: pad.l - 6, y: yOf(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#4a5d62", "font-family": "Heebo" }, String(v)));
+  }
+  for (const t of xTicks) {
+    svg.append(el("line", { x1: xOf(t), x2: xOf(t), y1: pad.t, y2: h - pad.b, stroke: "#dde6e8" }));
+    svg.append(el("text", { x: xOf(t), y: h - pad.b + 16, "text-anchor": "middle", "font-size": 11, fill: "#4a5d62", "font-family": "Heebo" }, xFmt(t)));
+  }
+  svg.append(el("line", { x1: pad.l, x2: w - pad.r, y1: yOf(0), y2: yOf(0), stroke: "#4a5d62" }));
+}
+function niceMax(v) {
+  for (const m of [2, 5, 10, 20, 40, 60, 80, 100]) if (v <= m) return m;
+  return 100;
+}
+function drawCurve(id, key) {
+  const svg = $(id);
+  const w = 420, h = 260, pad = { l: 34, r: 24, t: 12, b: 30 };
+  const lines = CHART_NAMES.map((name) => series[name] && series[name][key]).filter(Boolean);
+  const peak = Math.max(1, ...lines.flatMap((pts) => pts.map((p) => p.y)));
+  const yMax = niceMax(peak);
+  const yStep = yMax / 4;
+  const xOf = (d) => pad.l + (Math.log10(d) - 1) / 4 * (w - pad.l - pad.r);
+  const yOf = (v) => pad.t + (1 - v / yMax) * (h - pad.t - pad.b);
+  frame(svg, w, h, pad, [10, 100, 1000, 10000, 100000], yMax, yStep, xOf, yOf, (t) => "$" + (t >= 1000 ? t / 1000 + "k" : t));
+  const selected = $("who").value;
+  CHART_NAMES.forEach((name, idx) => {
+    const pts = series[name] && series[name][key];
+    if (!pts || pts.length < 2) return;
+    let d = "M" + xOf(pts[0].d).toFixed(1) + "," + yOf(pts[0].y).toFixed(1);
+    for (let i = 1; i < pts.length; i++) {
+      d += " H" + xOf(pts[i].d).toFixed(1) + " V" + yOf(pts[i].y).toFixed(1);
+    }
+    const on = name === selected;
+    svg.append(el("path", { d, fill: "none", stroke: RAW_COLORS[idx], "stroke-width": on ? 3 : 1.6, opacity: on ? 1 : 0.55, "stroke-linejoin": "round" }));
+    const last = pts[pts.length - 1];
+    if (last.exhausted) {
+      svg.append(el("circle", { cx: xOf(last.d), cy: yOf(last.y), r: on ? 4 : 3, fill: RAW_COLORS[idx] }));
+    }
+  });
+  const amount = Number($("amt").value);
+  if (amount >= 10 && amount <= 100000) {
+    const x = xOf(amount);
+    svg.append(el("line", { x1: x, x2: x, y1: pad.t, y2: h - pad.b, stroke: "#172226", "stroke-dasharray": "3 3" }));
+  }
+}
+function drawCase() {
+  const svg = $("chart-case");
+  const w = 420, h = 200, pad = { l: 34, r: 22, t: 12, b: 30 };
+  const yLo = 24, yHi = 31;
+  const xOf = (m) => pad.l + m / 90 * (w - pad.l - pad.r);
+  const yOf = (v) => pad.t + (yHi - v) / (yHi - yLo) * (h - pad.t - pad.b);
+  svg.replaceChildren();
+  for (const v of [24, 26, 28, 30]) {
+    svg.append(el("line", { x1: pad.l, x2: w - pad.r, y1: yOf(v), y2: yOf(v), stroke: "#dde6e8" }));
+    svg.append(el("text", { x: pad.l - 6, y: yOf(v) + 4, "text-anchor": "end", "font-size": 11, fill: "#4a5d62", "font-family": "Heebo" }, v + "%"));
+  }
+  for (const [m, label] of [[0, "21:00"], [30, "21:30"], [60, "22:00"], [90, "22:30"]]) {
+    svg.append(el("text", { x: xOf(m), y: h - pad.b + 16, "text-anchor": "middle", "font-size": 11, fill: "#4a5d62", "font-family": "Heebo" }, label));
+  }
+  svg.append(el("line", { x1: xOf(30.9), x2: xOf(30.9), y1: pad.t, y2: h - pad.b, stroke: "#8c3b2e", "stroke-dasharray": "3 3" }));
+  let d = "M" + xOf(CASE[0][0]) + "," + yOf(CASE[0][1]);
+  for (let i = 1; i < CASE.length; i++) d += " H" + xOf(CASE[i][0]).toFixed(1) + " V" + yOf(CASE[i][1]).toFixed(1);
+  svg.append(el("path", { d, fill: "none", stroke: "#172226", "stroke-width": 2.4 }));
+}
+function curve(levels) {
+  const pts = [];
+  if (!levels.length) return pts;
+  for (const d of SAMPLE) {
+    const r = walk(levels, d);
+    pts.push({ d, y: Math.abs(r.end - r.start) * 100, exhausted: r.exhausted });
+    if (r.exhausted) break;
+  }
+  return pts;
+}
+function drawCharts() {
+  drawCurve("chart-buy", "buy");
+  drawCurve("chart-sell", "sell");
+  drawCurve("chart-buy-no", "buyNo");
+  drawCurve("chart-sell-no", "sellNo");
+  for (const b of document.querySelectorAll("#legend button")) {
+    b.setAttribute("aria-pressed", b.dataset.name === $("who").value ? "true" : "false");
+  }
+}
+async function loadCharts() {
+  await Promise.all(CHART_NAMES.map(async (name) => {
+    const person = PEOPLE.find((p) => p.name === name);
+    const books = await load(person);
+    series[name] = {
+      buy: curve(levelsOf(books.yes, "asks")),
+      sell: curve(levelsOf(books.yes, "bids")),
+      buyNo: curve(levelsOf(books.no, "asks")),
+      sellNo: curve(levelsOf(books.no, "bids"))
+    };
+  }));
+  drawCharts();
+}
+
+async function init() {
+  PEOPLE = await fetch("candidates.json").then((r) => r.json());
+  for (const person of PEOPLE) {
+    const option = document.createElement("option");
+    option.value = person.name;
+    option.textContent = he(person);
+    if (person.name === "Naftali Bennett") option.selected = true;
+    $("who").append(option);
+  }
+  CHART_NAMES.forEach((name, idx) => {
+    const person = PEOPLE.find((p) => p.name === name);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.name = name;
+    b.innerHTML = "<i style=\"background:" + RAW_COLORS[idx] + "\"></i>" + he(person);
+    b.addEventListener("click", () => { $("who").value = name; run(); });
+    $("legend").append(b);
+  });
+  drawCase();
+  run();
+  loadCharts();
+}
+for (const b of document.querySelectorAll(".seg button")) {
+  b.addEventListener("click", () => {
+    act = b.dataset.act;
+    for (const o of document.querySelectorAll(".seg button")) o.setAttribute("aria-pressed", o === b ? "true" : "false");
+    run();
+  });
+}
+for (const b of document.querySelectorAll("#presets button")) {
+  b.addEventListener("click", () => { $("amt").value = b.dataset.v; run(); });
+}
+$("amt").addEventListener("input", run);
+$("who").addEventListener("change", run);
+init();
+</script>
+</body>
+</html>

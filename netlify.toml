@@ -1,0 +1,10 @@
+[build]
+  publish = "report"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/books"
+  to = "/.netlify/functions/books"
+  status = 200

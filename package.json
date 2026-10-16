@@ -1,0 +1,8 @@
+{
+  "name": "israel-pm-tape",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^8.2.0"
+  }
+}

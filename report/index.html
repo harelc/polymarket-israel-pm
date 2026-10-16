@@ -311,6 +311,25 @@
     </table>
   </section>
 
+  <section>
+    <h2>השוק כולו במספרים</h2>
+    <div class="fact">
+      <div class="big">$3.7M</div>
+      <p>הכסף שמושקע בשוק כרגע (open interest) בכל המועמדים יחד. מאז נובמבר 2025 נסחרו בו <span class="ltr">$46.8M</span>, כי אותן מניות עוברות מיד ליד שוב ושוב.</p>
+      <div class="big">62%</div>
+      <p>מכל המחזור נרשם אצל 15 מועמדים שמחירם היום 0.3¢ או פחות, כמו שקד, ברקת ואוחנה. המחזור הכולל אומר מעט על המרוץ עצמו.</p>
+      <div class="big">10</div>
+      <p>ארנקים יזמו 32% מהכסף בעסקאות של 9 הימים האחרונים, מתוך 1,947 ארנקים פעילים. 19 הארנקים הגדולים יזמו כמעט חצי.</p>
+      <div class="big">97%</div>
+      <p>סכום המחירים של כל המועמדים. מי שקונה «כן» על כולם משלם <span class="ltr">99.9¢</span> על דולר אחד בטוח, ומי שמוכר את כולם מקבל <span class="ltr">93.9¢</span>. כלומר המחירים עקביים זה עם זה, אבל זה לא אומר שהם מבוססים על הרבה כסף.</p>
+    </div>
+    <p class="muted small" style="margin-top:18px">המספרים למעלה נכונים ל־16 באוקטובר 2026. הטבלה מחושבת מהפקודות שממתינות עכשיו.</p>
+    <table class="sizes" id="market">
+      <thead><tr><th>מועמד</th><th class="n">מחיר</th><th class="n">פער</th><th class="n">כדי להעלות ב־5 נקודות</th><th class="n">כדי להוריד ב־5 נקודות</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
   <footer>
     <p>בפולימרקט «כן» ו«לא» הם שני צדדים של אותו ספר: קנייה של מניית «לא» שקולה למכירה של מניית «כן», אבל לא באותו סכום: כשמחיר «כן» הוא 12¢, מניית «לא» עולה 88¢. לכן אותו סכום בדולרים מזיז את המחיר הרבה פחות בצד של «לא». המחיר המוצג באתר הוא האמצע בין מחיר הקנייה למחיר המכירה, כל עוד הפער ביניהם קטן מ־<span class="ltr">10¢</span>. מקור הנתונים: ה־API הציבורי של פולימרקט.</p>
   </footer>
@@ -666,6 +685,32 @@ async function loadCharts() {
   drawCharts();
 }
 
+function costToMove(levels, points, up) {
+  if (!levels.length) return null;
+  const target = levels[0].price + (up ? points : -points) / 100;
+  let total = 0;
+  for (const l of levels) {
+    if (up ? l.price >= target - 1e-9 : l.price <= target + 1e-9) return total;
+    total += l.cash;
+  }
+  return null;
+}
+async function drawMarket() {
+  const rows = await Promise.all(CHART_NAMES.map(async (name) => {
+    const person = PEOPLE.find((p) => p.name === name);
+    const books = await load(person);
+    const asks = levelsOf(books.yes, "asks");
+    const bids = levelsOf(books.yes, "bids");
+    if (!asks.length || !bids.length) return "";
+    const cell = (v) => "<td class=\"n\">" + (v === null ? "אין מספיק פקודות" : fmtMoney(v)) + "</td>";
+    return "<tr><td>" + he(person) + "</td>" +
+      "<td class=\"n\">" + fmtCents((asks[0].price + bids[0].price) / 2) + "</td>" +
+      "<td class=\"n\">" + fmtCents(asks[0].price - bids[0].price) + "</td>" +
+      cell(costToMove(asks, 5, true)) +
+      (bids[0].price < 0.05 ? "<td class=\"n\">–</td>" : cell(costToMove(bids, 5, false))) + "</tr>";
+  }));
+  document.querySelector("#market tbody").innerHTML = rows.join("");
+}
 async function init() {
   PEOPLE = await fetch("candidates.json").then((r) => r.json());
   for (const person of PEOPLE) {
@@ -687,6 +732,7 @@ async function init() {
   drawCase();
   run();
   loadCharts();
+  drawMarket();
 }
 for (const b of document.querySelectorAll(".seg button")) {
   b.addEventListener("click", () => {

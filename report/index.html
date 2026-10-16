@@ -475,49 +475,72 @@ function drawBook(book, buy, dollars, title) {
   const asks = levelsOf(book, "asks");
   const bids = levelsOf(book, "bids");
   const eatSide = buy ? asks : bids;
+  const units = (p) => Math.round(p * 1000);
+  const fine = [...asks, ...bids].some((l) => units(l.price) % 10 !== 0);
+  const tick = fine ? 1 : 10;
+  let left = dollars;
+  const eaten = new Map();
+  for (const l of eatSide) {
+    const take = Math.max(0, Math.min(l.cash, left));
+    left -= take;
+    if (take > 0) eaten.set(units(l.price), take);
+  }
+  const eatenUnits = [...eaten.keys()];
+  const bestAsk = asks.length ? units(asks[0].price) : null;
+  const bestBid = bids.length ? units(bids[0].price) : null;
+  let loU, hiU;
+  if (buy) {
+    loU = (bestBid ?? bestAsk) - 60;
+    hiU = Math.max(bestAsk ?? 0, ...eatenUnits) + 60;
+  } else {
+    hiU = (bestAsk ?? bestBid) + 60;
+    loU = Math.min(bestBid ?? 1000, ...eatenUnits) - 60;
+  }
+  loU = Math.max(tick, loU);
+  hiU = Math.min(1000 - tick, hiU);
+  const band = [10, 20, 50, 100].find((b) => (hiU - loU) / b < 60) || 100;
   const bucket = (levels) => {
     const m = new Map();
-    let left = levels === eatSide ? dollars : 0;
     for (const l of levels) {
-      const c = Math.round(l.price * 100);
-      const take = Math.max(0, Math.min(l.cash, left));
-      left -= take;
-      const o = m.get(c) || { cash: 0, eat: 0 };
+      const u = units(l.price);
+      const k = Math.floor(u / band);
+      const o = m.get(k) || { cash: 0, eat: 0 };
       o.cash += l.cash;
-      o.eat += take;
-      m.set(c, o);
+      o.eat += levels === eatSide ? eaten.get(u) || 0 : 0;
+      m.set(k, o);
     }
     return m;
   };
   const A = bucket(asks);
   const B = bucket(bids);
-  const eatenCents = [...(buy ? A : B)].filter(([, o]) => o.eat > 0).map(([c]) => c);
-  const bestAsk = asks.length ? Math.round(asks[0].price * 100) : null;
-  const bestBid = bids.length ? Math.round(bids[0].price * 100) : null;
-  let lo, hi;
-  if (buy) {
-    lo = (bestBid ?? bestAsk) - 6;
-    hi = Math.max(bestAsk ?? 0, ...eatenCents) + 6;
-  } else {
-    hi = (bestAsk ?? bestBid) + 6;
-    lo = Math.min(bestBid ?? 100, ...eatenCents) - 6;
-  }
-  lo = Math.max(1, lo);
-  hi = Math.min(99, hi);
+  const lo = Math.floor(loU / band);
+  const hi = Math.floor(hiU / band);
   const rows = hi - lo + 1;
   const rowH = Math.max(5, Math.min(16, 520 / rows));
-  const w = 640, mid = w / 2, labelW = 46, padT = 4;
-  const half = mid - labelW / 2 - 6;
-  const h = padT * 2 + rows * rowH;
+  const w = 640, mid = w / 2, labelW = 54, padT = 4;
+  const half = mid - labelW / 2 - 24;
+  const bodyH = padT + rows * rowH;
+  const h = bodyH + 26;
   svg.setAttribute("viewBox", "0 0 " + w + " " + h);
-  let maxCash = 1;
-  for (let c = lo; c <= hi; c++) maxCash = Math.max(maxCash, A.get(c)?.cash || 0, B.get(c)?.cash || 0);
+  let peak = 1;
+  for (let c = lo; c <= hi; c++) peak = Math.max(peak, A.get(c)?.cash || 0, B.get(c)?.cash || 0);
+  const mag = 10 ** Math.floor(Math.log10(peak / 3));
+  const step = [1, 2, 5, 10].map((m) => m * mag).find((s) => peak / s <= 4);
+  const maxCash = Math.ceil(peak / step) * step;
+  const kFmt = (v) => "$" + (v >= 1000 ? (v / 1000) + "k" : v);
+  for (let v = 0; v <= maxCash + 1e-9; v += step) {
+    for (const s of [-1, 1]) {
+      const x = mid + s * (labelW / 2 + v / maxCash * half);
+      svg.append(el("line", { x1: x, x2: x, y1: padT, y2: bodyH + 4, stroke: v === 0 ? "#9fb0b4" : "#dde6e8" }));
+      if (v > 0) svg.append(el("text", { x, y: bodyH + 18, "text-anchor": "middle", "font-size": 11, fill: "#4a5d62", "font-family": "Heebo" }, kFmt(v)));
+    }
+  }
   const bar = (o, c, y, dirSign, fill, eatFill) => {
     if (!o || o.cash <= 0) return;
     const len = Math.max(1, o.cash / maxCash * half);
     const x0 = mid + dirSign * labelW / 2;
     const g = el("g", {});
-    g.append(el("title", {}, fmtMoney(o.cash) + " ב־" + c + "¢" + (o.eat > 0 ? ", נבלעים " + fmtMoney(o.eat) : "")));
+    g.append(el("title", {}, fmtMoney(o.cash) + " ב־" + c + (o.eat > 0 ? ", נבלעים " + fmtMoney(o.eat) : "")));
     g.append(el("rect", { x: dirSign > 0 ? x0 : x0 - len, y, width: len, height: rowH - 1, fill }));
     if (o.eat > 0) {
       const e = Math.max(1, o.eat / maxCash * half);
@@ -525,12 +548,15 @@ function drawBook(book, buy, dollars, title) {
     }
     svg.append(g);
   };
+  const every = rowH >= 11 ? 1 : [2, 5, 10].find((n) => n * rowH >= 11) || 10;
   for (let c = hi; c >= lo; c--) {
     const y = padT + (hi - c) * rowH;
-    bar(B.get(c), c, y, -1, "#bcd3cb", "#1c5e50");
-    bar(A.get(c), c, y, 1, "#e6cbc3", "#8c3b2e");
-    if (rowH >= 11 || c % 5 === 0) {
-      svg.append(el("text", { x: mid, y: y + rowH / 2 + 4, "text-anchor": "middle", "font-size": Math.min(12, Math.max(10, rowH - 3)), fill: "#4a5d62", "font-family": "Heebo" }, c + "¢"));
+    const rowLabel = c === 0 ? "<1¢" : fmtCents(c * band / 1000);
+    const label = band === tick ? rowLabel : fmtCents(c * band / 1000) + "–" + fmtCents((c + 1) * band / 1000 - tick / 1000);
+    bar(B.get(c), label, y, -1, "#bcd3cb", "#1c5e50");
+    bar(A.get(c), label, y, 1, "#e6cbc3", "#8c3b2e");
+    if (c % every === 0) {
+      svg.append(el("text", { x: mid, y: y + rowH / 2 + 4, "text-anchor": "middle", "font-size": Math.min(12, Math.max(10, rowH - 3)), fill: "#4a5d62", "font-family": "Heebo" }, rowLabel));
     }
   }
 }

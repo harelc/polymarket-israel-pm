@@ -116,6 +116,10 @@
   .payout dt { color: var(--muted); }
   .payout dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 
+  .book { margin-top: 20px; }
+  .book-sides { display: flex; flex-direction: row-reverse; justify-content: space-between; font-size: 0.85rem; color: var(--muted); }
+  .eat-key { color: var(--ink); }
+
   .fact {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -212,6 +216,13 @@
       <dl id="payout" class="payout"></dl>
     </div>
   </div>
+
+  <figure class="book">
+    <h3 id="book-title">ספר הפקודות</h3>
+    <p class="sub">כל פס הוא ערימת פקודות במחיר אחד, ואורכו לפי הסכום בדולרים. <b class="eat-key">הקטע הכהה</b> הוא מה שהעסקה במחשבון בולעת.</p>
+    <div class="book-sides"><span>פקודות קנייה (מי שמחכה לקנות)</span><span>פקודות מכירה (מי שמחכה למכור)</span></div>
+    <svg id="book" class="plot" role="img" aria-label="ספר הפקודות"></svg>
+  </figure>
 
   <section>
     <h2>איך המחיר זז</h2>
@@ -409,7 +420,9 @@ async function run() {
   }
   const buy = act.startsWith("buy");
   const yesSide = act.endsWith("yes");
-  const r = walk(levelsOf(yesSide ? books.yes : books.no, buy ? "asks" : "bids"), dollars);
+  const book = yesSide ? books.yes : books.no;
+  drawBook(book, buy, dollars, "ספר הפקודות של " + (yesSide ? "«כן»" : "«לא»") + " · " + he(person));
+  const r = walk(levelsOf(book, buy ? "asks" : "bids"), dollars);
   if (!r) {
     $("delta").textContent = "–";
     $("payout").replaceChildren();
@@ -452,6 +465,73 @@ async function run() {
     $("why").innerHTML = (r.exhausted
       ? "כל הפקודות בצד הזה נגמרו אחרי " + ltr(fmtMoney(r.spent)) + ". היתרה, " + ltr(fmtMoney(dollars - r.spent)) + ", לא מתבצעת. "
       : "") + stamp(books);
+  }
+}
+
+function drawBook(book, buy, dollars, title) {
+  $("book-title").textContent = title;
+  const svg = $("book");
+  svg.replaceChildren();
+  const asks = levelsOf(book, "asks");
+  const bids = levelsOf(book, "bids");
+  const eatSide = buy ? asks : bids;
+  const bucket = (levels) => {
+    const m = new Map();
+    let left = levels === eatSide ? dollars : 0;
+    for (const l of levels) {
+      const c = Math.round(l.price * 100);
+      const take = Math.max(0, Math.min(l.cash, left));
+      left -= take;
+      const o = m.get(c) || { cash: 0, eat: 0 };
+      o.cash += l.cash;
+      o.eat += take;
+      m.set(c, o);
+    }
+    return m;
+  };
+  const A = bucket(asks);
+  const B = bucket(bids);
+  const eatenCents = [...(buy ? A : B)].filter(([, o]) => o.eat > 0).map(([c]) => c);
+  const bestAsk = asks.length ? Math.round(asks[0].price * 100) : null;
+  const bestBid = bids.length ? Math.round(bids[0].price * 100) : null;
+  let lo, hi;
+  if (buy) {
+    lo = (bestBid ?? bestAsk) - 6;
+    hi = Math.max(bestAsk ?? 0, ...eatenCents) + 6;
+  } else {
+    hi = (bestAsk ?? bestBid) + 6;
+    lo = Math.min(bestBid ?? 100, ...eatenCents) - 6;
+  }
+  lo = Math.max(1, lo);
+  hi = Math.min(99, hi);
+  const rows = hi - lo + 1;
+  const rowH = Math.max(5, Math.min(16, 520 / rows));
+  const w = 640, mid = w / 2, labelW = 46, padT = 4;
+  const half = mid - labelW / 2 - 6;
+  const h = padT * 2 + rows * rowH;
+  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+  let maxCash = 1;
+  for (let c = lo; c <= hi; c++) maxCash = Math.max(maxCash, A.get(c)?.cash || 0, B.get(c)?.cash || 0);
+  const bar = (o, c, y, dirSign, fill, eatFill) => {
+    if (!o || o.cash <= 0) return;
+    const len = Math.max(1, o.cash / maxCash * half);
+    const x0 = mid + dirSign * labelW / 2;
+    const g = el("g", {});
+    g.append(el("title", {}, fmtMoney(o.cash) + " ב־" + c + "¢" + (o.eat > 0 ? ", נבלעים " + fmtMoney(o.eat) : "")));
+    g.append(el("rect", { x: dirSign > 0 ? x0 : x0 - len, y, width: len, height: rowH - 1, fill }));
+    if (o.eat > 0) {
+      const e = Math.max(1, o.eat / maxCash * half);
+      g.append(el("rect", { x: dirSign > 0 ? x0 : x0 - e, y, width: e, height: rowH - 1, fill: eatFill }));
+    }
+    svg.append(g);
+  };
+  for (let c = hi; c >= lo; c--) {
+    const y = padT + (hi - c) * rowH;
+    bar(B.get(c), c, y, -1, "#bcd3cb", "#1c5e50");
+    bar(A.get(c), c, y, 1, "#e6cbc3", "#8c3b2e");
+    if (rowH >= 11 || c % 5 === 0) {
+      svg.append(el("text", { x: mid, y: y + rowH / 2 + 4, "text-anchor": "middle", "font-size": Math.min(12, Math.max(10, rowH - 3)), fill: "#4a5d62", "font-family": "Heebo" }, c + "¢"));
+    }
   }
 }
 
